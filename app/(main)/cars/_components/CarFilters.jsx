@@ -8,10 +8,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Badge, Filter } from "lucide-react";
+import { Badge, Filter, Sliders, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import FilterControls from "./FilterControls";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const CarFilters = ({ filters }) => {
   //WE CAN DIRECTLY SHARE THE FILTER URL WITH SOMEONE
@@ -64,8 +71,43 @@ const CarFilters = ({ filters }) => {
     priceRangeMax: filters.priceRange.max,
   };
 
-  //HANDLE APPLY FILTERS
-  const applyFilters = () =>{};
+  // Update URL when filters change
+  const applyFilters = useCallback(() => {
+    const params = new URLSearchParams();
+
+    if (make) params.set("make", make);
+    if (bodyType) params.set("bodyType", bodyType);
+    if (fuelType) params.set("fuelType", fuelType);
+    if (transmission) params.set("transmission", transmission);
+    if (priceRange[0] > filters.priceRange.min)
+      params.set("minPrice", priceRange[0].toString());
+    if (priceRange[1] < filters.priceRange.max)
+      params.set("maxPrice", priceRange[1].toString());
+    if (sortBy !== "newest") params.set("sortBy", sortBy);
+
+    // Preserve search and page params if they exist
+    const search = searchParams.get("search");
+    const page = searchParams.get("page");
+    if (search) params.set("search", search);
+    if (page && page !== "1") params.set("page", page);
+
+    const query = params.toString();
+    const url = query ? `${pathName}?${query}` : pathName;
+
+    router.push(url);
+    setIsSheetOpen(false);
+  }, [
+    make,
+    bodyType,
+    fuelType,
+    transmission,
+    priceRange,
+    sortBy,
+    pathName,
+    searchParams,
+    filters.priceRange.min,
+    filters.priceRange.max,
+  ]);
 
   //HANDLE FILTER CHANGE FUNCTION
   const onFilterChange = (filterName, value) => {
@@ -130,7 +172,7 @@ const CarFilters = ({ filters }) => {
     currentSortBy,
   ]);
   return (
-    <div>
+    <div className="flex lg:flex-col justify-between gap-4">
       {/* MOBILE FILTERS */}
       <div className="lg:hidden mb-4">
         <div className="flex items-center">
@@ -171,10 +213,78 @@ const CarFilters = ({ filters }) => {
                 >
                   Reset
                 </Button>
-                <Button onClick={applyFilters} type="button" className='flex-1'>Show Results</Button>
+                <Button onClick={applyFilters} type="button" className="flex-1">
+                  Show Results
+                </Button>
               </SheetFooter>
             </SheetContent>
           </Sheet>
+        </div>
+      </div>
+
+      {/* SORT SELECTION */}
+      <Select
+        onValueChange={(value) => {
+          setSortBy(value);
+          setTimeout(() => applyFilters(), 0);
+        }}
+        value={sortBy}
+      >
+        <SelectTrigger className="w-[180px] lg:w-full">
+          <SelectValue placeholder="Sort By" />
+        </SelectTrigger>
+
+        <SelectContent>
+          {[
+            { value: "newest", label: "Newest First" },
+            { value: "priceAsc", label: "Price: Low to High" },
+            { value: "priceDesc", label: "Price: Hight to Low" },
+          ].map((option) => {
+            return (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+
+      {/* DESKTOP FILTERS */}
+      <div className="hidden lg:block sticky top-24">
+        <div className="border rounded-lg overflow-hidden bg-white">
+          <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+            <h3 className="font-medium flex items-center">
+              <Sliders className="mr-2 h-4 w-4" />
+              Filters
+            </h3>
+            {activeFilterCount > 0 && (
+              <Button
+                onClick={clearFilters}
+                className="h-8 text-gray-800 text-sm "
+                variant="ghost"
+                size="sm"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Clear All
+              </Button>
+            )}
+          </div>
+       
+
+        <div className="p-4">
+          <FilterControls
+            filters={filters}
+            currentFilters={currentFilters}
+            onClearFilter={onClearFilter}
+            onFilterChange={onFilterChange}
+          />
+        </div>
+
+        <div className="px-4 py-4 border-t">
+          <Button onClick={applyFilters} className="w-full">
+            Apply Filters
+          </Button>
+        </div>
         </div>
       </div>
     </div>

@@ -1,16 +1,48 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import Image from "next/image";
-import { CarIcon, Heart } from "lucide-react";
+import { CarIcon, Heart, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useRouter } from "next/navigation";
+import useFetch from "@/hooks/use-fetch";
+import { toggleSavedCar } from "@/actions/car-listing";
+import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 const CarCard = ({ car }) => {
   const [saved, setSaved] = useState(car.wishlisted);
   const router = useRouter();
-  const handleToggleSave = async (e) => {};
+  const { isSignedIn } = useAuth();
+  const {
+    loading: isToggling,
+    fn: toggleSavedCarFn,
+    data: toggleResult,
+    error: toggleError,
+  } = useFetch(toggleSavedCar);
+
+  const handleToggleSave = async (e) => {
+    e.preventDefault();
+    if (!isSignedIn) {
+      toast.error("please sign in to save cars");
+      router.push("/sign-in");
+      return;
+    }
+    if (isToggling) return;
+    await toggleSavedCarFn(car.id);
+  };
+
+  useEffect(() => {
+    if (toggleResult?.success && toggleResult.saved !== saved) {
+      setSaved(toggleResult.saved);
+      toast.success(toggleResult.message);
+    }
+  }, [toggleResult, saved]);
+
+  useEffect(() => {
+    if (toggleError) toast.error("Failed to update Favorites");
+  }, [toggleError]);
   return (
     <Card className="overflow-hidden hover:shadow-lg transition group py-0">
       <div className="relative h-48">
@@ -35,7 +67,13 @@ const CarCard = ({ car }) => {
           onClick={handleToggleSave}
           className={`absolute top-2 right-2 bg-white/90 rounded-full p-1.5 ${saved ? "text-red-500" : "text-gray-600"}`}
         >
-          <Heart className={saved ? "fill-current" : ""} size={20} />
+          {
+            isToggling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Heart className={saved ? "fill-current" : ""} size={20} />
+            )
+          }
         </Button>
       </div>
 
@@ -51,21 +89,32 @@ const CarCard = ({ car }) => {
         </div>
 
         <div className="text-gray-600 mb-2 flex items-center">
-            <span>{car.year}</span>
-            <span className="mx-2">.</span>
-            <span>{car.transmission}</span>
-            <span className="mx-2">.</span>
-            <span>{car.fuelType}</span>
+          <span>{car.year}</span>
+          <span className="mx-2">.</span>
+          <span>{car.transmission}</span>
+          <span className="mx-2">.</span>
+          <span>{car.fuelType}</span>
         </div>
 
         <div className="flex flex-wrap gap-1 mb-4">
-            <Badge variant='outline' className="bg-gray-50">{car.bodyType}</Badge>
-            <Badge variant='outline' className="bg-gray-50">{car.mileage.toLocaleString()} miles</Badge>
-            <Badge variant='outline' className="bg-gray-50">{car.color}</Badge>
+          <Badge variant="outline" className="bg-gray-50">
+            {car.bodyType}
+          </Badge>
+          <Badge variant="outline" className="bg-gray-50">
+            {car.mileage.toLocaleString()} miles
+          </Badge>
+          <Badge variant="outline" className="bg-gray-50">
+            {car.color}
+          </Badge>
         </div>
 
         <div className="flex justify-between">
-            <Button onClick={()=>router.push(`/cars/${car.id}`)} className={'flex-1'}>View Car</Button>
+          <Button
+            onClick={() => router.push(`/cars/${car.id}`)}
+            className={"flex-1"}
+          >
+            View Car
+          </Button>
         </div>
       </CardContent>
     </Card>
