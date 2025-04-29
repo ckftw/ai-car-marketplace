@@ -26,10 +26,18 @@
 
 FUNCTIONALITIES
 
-1. Filters
+1. Filters(cartype,model,fuelType etc)
 2. Wishlist (saved cars feature)
 3. AI Search car (drag and drop image and get all details if it is in DB)
 4. Car Details
 5. Car Preview feature (when u share link with someone, they can preview car name and image)
 6. Share the car details (whatsapp,fb,etc)
 7. Emi calculator
+8. Car Test drive booking and reserve car
+9. Admin can see statisctic
+
+//REDIRECT CAN ONLY BE USED IN SERVER COMPONENTS
+redirect('/sign-in?redirect=/reservations')
+
+//FOR CLIENT COMPONENTS, USE USEROUTER HOOK
+router.push('/sign-in?redirect=/reservations');
