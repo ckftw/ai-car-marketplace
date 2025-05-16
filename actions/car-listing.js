@@ -1,5 +1,6 @@
 "use server";
 
+
 import { serializeCarData } from "@/lib/helper";
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
@@ -306,28 +307,28 @@ export async function getSavedCars() {
 
 //GET CAR DETAILS BY ID
 export async function getCarById(carId) {
+    console.log('carId', carId);
     try {
+        // Get current user if authenticated
         const { userId } = await auth();
         let dbUser = null;
 
-        if (userId) {
+        if (userId !== null) {
             dbUser = await db.user.findUnique({
-                where: {
-                    clerkUserId: userId,
-                },
+                where: { clerkUserId: userId },
             });
         }
 
+        // Get car details
         const car = await db.car.findUnique({
-            where: {
-                id: carId,
-            },
+            where: { id: carId },
         });
+        console.log('car', car);
 
         if (!car) {
             return {
                 success: false,
-                error: "No Car Found",
+                error: "Car not found",
             };
         }
 
@@ -347,27 +348,31 @@ export async function getCarById(carId) {
         }
 
         // Check if user has already booked a test drive for this car
-        const existingTestDrive = await db.testDriveBooking.findFirst({
-            where: {
-                carId,
-                userId: dbUser.id,
-                status: { in: ["PENDING", "CONFIRMED", "COMPLETED"] },
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
-        });
-
         let userTestDrive = null;
-        if (existingTestDrive) {
-            userTestDrive = {
-                id: existingTestDrive.id,
-                status: existingTestDrive.status,
-                bookingDate: existingTestDrive.bookingDate.toISOString(),
-            };
+
+        if (dbUser) {
+            const existingTestDrive = await db.testDriveBooking.findFirst({
+                where: {
+                    carId,
+                    userId: dbUser.id,
+                    status: { in: ["PENDING", "CONFIRMED", "COMPLETED"] },
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+            });
+
+            if (existingTestDrive) {
+                userTestDrive = {
+                    id: existingTestDrive.id,
+                    status: existingTestDrive.status,
+                    bookingDate: existingTestDrive.bookingDate.toISOString(),
+                };
+            }
         }
 
-        //GET DEALERSHIP INFO FOR THAT CAR
+
+        // Get dealership info for test drive availability
         const dealership = await db.dealershipInfo.findFirst({
             include: {
                 workingHours: true,

@@ -22,7 +22,7 @@ const HomeSearch = () => {
 
   const handleTextSubmit = (e) => {
     e.preventDefault();
-    if (!searchTerm.trim()) {
+    if (!searchTerm?.trim()) {
       toast.error("Please enter something");
       return;
     }
